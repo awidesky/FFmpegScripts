@@ -67,9 +67,9 @@ public class EncodeStatusFrame extends JFrame {
     private CustomTableModel model;
     
 	public EncodeStatusFrame() {
-        setTitle("Custom JTable with Editable Model");
+        setTitle("ffmpeg process status");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(700, 300);
+        setSize(1000, 500);
         setLocationRelativeTo(null);
 
         model = new CustomTableModel();
@@ -108,7 +108,15 @@ public class EncodeStatusFrame extends JFrame {
         };
         JScrollPane scrollPane = new JScrollPane(table);
 
+
         getContentPane().add(scrollPane, BorderLayout.CENTER);
+        
+        table.getColumnModel().getColumn(0).setPreferredWidth(200);
+        table.getColumnModel().getColumn(1).setPreferredWidth(24);
+        table.getColumnModel().getColumn(2).setPreferredWidth(24);
+        table.getColumnModel().getColumn(3).setPreferredWidth(60);
+        table.getColumnModel().getColumn(4).setPreferredWidth(60);
+        table.getColumnModel().getColumn(5).setPreferredWidth(90);
     }
 	
 	public EncodeStatus addTable(File outFile) {

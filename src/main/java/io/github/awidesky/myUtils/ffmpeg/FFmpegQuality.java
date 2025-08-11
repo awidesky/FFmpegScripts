@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
@@ -37,59 +38,82 @@ public class FFmpegQuality {
 	private final static ExecutorService pool = Executors.newFixedThreadPool(THREADS);
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
-	private static String ffmpegdir = ".\\";
-	private static File root = new File("");
+	private static String ffmpegdir = "C:\\Users\\fvt\\Downloads\\ffmpeg-2025-08-07-git-fa458c7243-full_build\\bin\\";
+	private static File root = new File("C:\\Users\\fvt\\Downloads\\test");
 	
 	private static File logDir = new File(root, "logs");
 	private static PrintWriter result;
 	
+	private static final boolean filterlog = false;
+	
 	private static EncodeStatusFrame frame;
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, InvocationTargetException, InterruptedException {
 
 		if(!logDir.exists()) logDir.mkdirs();
 		File resultFile = new File(root, "results.txt");
+		if(resultFile.exists()) resultFile.delete();
 		resultFile.createNewFile();
 		result = new PrintWriter(resultFile);
 		
 		System.out.println("Using " + THREADS + " threads...");
-		SwingUtilities.invokeLater(() -> {
+		SwingUtilities.invokeAndWait(() -> {
 			frame = new EncodeStatusFrame();
 			frame.setVisible(true);
 		});
 		
-//		Arrays.stream(root.listFiles())
-//		.filter(File::isFile).filter(f -> f.getName().endsWith(".mp4"))
-//		.map(f -> pool.submit(() -> launch(f)))
-//		.forEach(f -> {
-//			try {
-//				f.get();
-//			} catch (InterruptedException | ExecutionException e) {
-//				System.err.println("Failed to wait for future!");
-//				e.printStackTrace();
-//			}
-//		});
+		List.of(
+				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_1.mp4"),
+				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_18.mp4"),
+				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1_2k_265_slow_24.mp4"),
+				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1.mp4")
+				)
+		.stream()
+		.map(t -> pool.submit(() -> launch(t)))
+		.toList().stream()
+		.forEach(f -> {
+			try {
+				f.get();
+			} catch (InterruptedException | ExecutionException e) {
+				System.err.println("Failed to wait for future!");
+				e.printStackTrace();
+			}
+		});
+
 		pool.shutdown();
 		iopool.shutdown();
+		result.flush();
+		result.close();
 		System.out.println("done!");
 
 	}
 
-	public static void launch(QualityTask t) throws FileNotFoundException {
+	public static void launch(QualityTask t) {
 		List<String> cmd = new LinkedList<String>();
-		cmd.addAll(List.of(ffmpegdir + "ffmpeg.exe", 
-				"-hide_banner", // -i 2.lib.mp4 -i 2.mp4 -filter_complex "[0:v][1:v]ssim=stats_file=ssim_log.txt;[0:v][1:v]psnr;[0:v][1:v]libvmaf" -f null -
-				"-i", t.distorted(), "-i", t.reference(), "-filter_complex", "\"[0:v][1:v]ssim=stats_file=ssim_log.txt;[0:v][1:v]psnr;[0:v][1:v]libvmaf\"", "-f", "null", "-"));
+		cmd.addAll(List.of(ffmpegdir + "ffmpeg", 
+				"-hide_banner",
+				"-i", t.distorted(), "-i", t.reference(), "-filter_complex",
+				filterlog 
+						? "\"[0:v][1:v]ssim=stats_file=" + t.name() + "_ssim_log.txt;[0:v][1:v]psnr;[0:v][1:v]libvmaf=log_fmt=xml:log_path=" + t.name() + "_vmaf_log.xml\""
+						: "\"[0:v][1:v]ssim;[0:v][1:v]psnr;[0:v][1:v]libvmaf\"",
+				"-f", "null", "-"));
 
 		ProcessBuilder pb = new ProcessBuilder(cmd);
-		File logFile = new File(logDir, t.distorted() + "_log.txt");
-		if(logFile.exists()) logFile.delete();
+		File logFile = new File(logDir, t.name() + "_log.txt");
 		try {
+			if(logFile.exists()) logFile.delete();
 			if(!logFile.exists()) logFile.createNewFile();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		PrintWriter pw = new PrintWriter(logFile);
+		PrintWriter pw;
+		try {
+			pw = new PrintWriter(logFile);
+		} catch (FileNotFoundException e) {
+			System.out.println("logFile not exist! : " + logFile.getAbsolutePath());
+			e.printStackTrace();
+			return;
+		}
 		
 		EncodeStatus stat = frame.addTable(new File(t.distorted()));
 		
@@ -105,10 +129,11 @@ public class FFmpegQuality {
 			
 			Future<?> f1 = iopool.submit(() -> {
 				Pattern statPattern = Pattern.compile("frame=\\s*(\\d+).*?fps=\\s*(\\d+).*?time=([\\d:.]+).*?speed=([\\d.]+)x");
-				try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+				try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()))) {
 					String line;
 					while((line = br.readLine()) != null) {
 						pw.println(line);
+						//System.out.println(line);
 						
 						Matcher matcher = statPattern.matcher(line);
 						if (matcher.find()) {
@@ -120,13 +145,10 @@ public class FFmpegQuality {
 
 
 						if(line.startsWith("[Parsed_ssim")) {
-							System.out.println(line);
 							ssim.set(line.replaceFirst("^\\[.*?\\]\\s*", ""));
 						} else if(line.startsWith("[Parsed_libvmaf")) {
-							System.out.println(line);
 							vmaf.set(line.replaceFirst("^\\[.*?\\]\\s*", ""));
 						} else if(line.startsWith("[Parsed_psnr")) {
-							System.out.println(line);
 							psnr.set(line.replaceFirst("^\\[.*?\\]\\s*", ""));
 						}
 					}
@@ -136,9 +158,10 @@ public class FFmpegQuality {
 				}
 			});
 			Future<?> f2 = iopool.submit(() -> {
-				try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()))) {
+				try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
 					String line;
 					while((line = br.readLine()) != null) {
+						//System.err.println(line);
 						pw.println(line);
 					}
 				} catch (IOException e) {
@@ -158,13 +181,27 @@ public class FFmpegQuality {
 				pw.flush();
 				pw.close();
 			});
+			SwingUtilities.invokeLater(() -> {
+				stat.setStatus("Finished with " + p.exitValue());
+				frame.updated(stat);
+			});
 			
 			ProcessHandle.Info info = p.info();
 			System.out.printf("[%s] started : %s, totalTime: %dms, exit code : %d\n",
 					pb.command().stream().collect(Collectors.joining(" ")), info.startInstant().get().toString(), info.totalCpuDuration().get().toMillis(), p.exitValue());
 			
-			result.println(List.of(t.name(), String.format("%.2f", new File(t.distorted()).length() / (1024.0 * 1024)) + " MB", stat.getSpeed(), bitrate(t.distorted()), vmaf.get(), psnr.get(), ssim.get())
+			String bit = bitrate(t.distorted());
+			System.out.println(List.of("\n==========" + t.name() + "==========",
+							"Size : " + String.format("%.2f", new File(t.distorted()).length() / (1024.0 * 1024)) + " MB",
+							"Speed : " + stat.getSpeed() + "x", 
+							"bitrate : " + bit + " kb/s", vmaf.get(), psnr.get(), ssim.get(),
+							"==========" + t.name() + "==========\n")
+					.stream().collect(Collectors.joining("\n")));
+			
+			result.println(List.of(t.name(), String.format("%.2f", new File(t.distorted()).length() / (1024.0 * 1024)), stat.getSpeed(), bit,
+					vmaf.get().substring(12), psnr.get().substring(5), ssim.get().substring(5))
 					.stream().collect(Collectors.joining("\t")));
+			result.flush();
 		} catch (InterruptedException | IOException e) {
 			System.err.println(t.distorted() + " failed!");
 			e.printStackTrace();
@@ -191,4 +228,7 @@ public class FFmpegQuality {
 }
 
 record QualityTask(String name, String reference, String distorted) {
+	public QualityTask(String reference, String distorted) {
+		this(new File(distorted).getName(), reference, distorted);
+	}
 }
