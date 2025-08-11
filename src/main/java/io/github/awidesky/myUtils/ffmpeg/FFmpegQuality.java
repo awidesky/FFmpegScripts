@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
@@ -38,8 +39,8 @@ public class FFmpegQuality {
 	private final static ExecutorService pool = Executors.newFixedThreadPool(THREADS);
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
-	private static String ffmpegdir = "C:\\Users\\fvt\\Downloads\\ffmpeg-2025-08-07-git-fa458c7243-full_build\\bin\\";
-	private static File root = new File("C:\\Users\\fvt\\Downloads\\test");
+	private static String ffmpegdir = "";
+	private static File root = new File("");
 	
 	private static File logDir = new File(root, "logs");
 	private static PrintWriter result;
@@ -57,16 +58,14 @@ public class FFmpegQuality {
 		result = new PrintWriter(resultFile);
 		
 		System.out.println("Using " + THREADS + " threads...");
+		long start = System.currentTimeMillis();
 		SwingUtilities.invokeAndWait(() -> {
 			frame = new EncodeStatusFrame();
 			frame.setVisible(true);
 		});
 		
 		List.of(
-				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_1.mp4"),
-				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_18.mp4"),
-				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1_2k_265_slow_24.mp4"),
-				new QualityTask("C:\\Users\\fvt\\Downloads\\test\\1_2k_veryslow_0.mp4", "C:\\Users\\fvt\\Downloads\\test\\1.mp4")
+				new QualityTask("", "")
 				)
 		.stream()
 		.map(t -> pool.submit(() -> launch(t)))
@@ -84,8 +83,10 @@ public class FFmpegQuality {
 		iopool.shutdown();
 		result.flush();
 		result.close();
-		System.out.println("done!");
 
+		Duration d = Duration.ofMillis(System.currentTimeMillis() - start);
+		System.out.println("Done! Time : " + String.format("%02d:%02d:%02d.%03d", d.toHours(), d.toMinutesPart(),
+				d.toSecondsPart(), d.toMillisPart()) + "ms");
 	}
 
 	public static void launch(QualityTask t) {
@@ -207,11 +208,15 @@ public class FFmpegQuality {
 			e.printStackTrace();
 		}
 	}
+	public static String bitrate(String file) {
+		return bitrate(null, file);
+	}
 	
 	// https://superuser.com/questions/1106343/determine-video-bitrate-using-ffmpeg
-	public static String bitrate(String file) {
+	public static String bitrate(File dir, String file) {
 		ProcessBuilder pb = new ProcessBuilder(
 				List.of(ffmpegdir + "ffprobe.exe", "-v", "quiet", "-select_streams", "v:0", "-show_entries", "format=bit_rate", "-of", "default=noprint_wrappers=1:nokey=1", file));
+		pb.directory(dir);
 		try {
 			Process p = pb.start();
 			Scanner sc = new Scanner(p.getInputStream());
@@ -222,7 +227,6 @@ public class FFmpegQuality {
 			e.printStackTrace();
 			return "N/A";
 		}
-		
 	}
 
 }
