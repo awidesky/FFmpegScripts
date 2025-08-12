@@ -39,8 +39,8 @@ public class FFmpegQuality {
 	private final static ExecutorService pool = Executors.newFixedThreadPool(THREADS);
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
-	private static String ffmpegdir = "";
-	private static File root = new File("");
+	private static String ffmpegdir = FFmpegProperties.ffmpegDir();
+	private static File root = FFmpegProperties.workingDir();
 	
 	private static File logDir = new File(root, "logs");
 	private static PrintWriter result;
@@ -57,16 +57,14 @@ public class FFmpegQuality {
 		resultFile.createNewFile();
 		result = new PrintWriter(resultFile);
 		
-		System.out.println("Using " + THREADS + " threads...");
+		System.out.println("Quality task using " + THREADS + " threads...");
 		long start = System.currentTimeMillis();
 		SwingUtilities.invokeAndWait(() -> {
 			frame = new EncodeStatusFrame();
 			frame.setVisible(true);
 		});
 		
-		List.of(
-				new QualityTask("", "")
-				)
+		FFmpegProperties.getQualityTasks()
 		.stream()
 		.map(t -> pool.submit(() -> launch(t)))
 		.toList().stream()
@@ -87,11 +85,13 @@ public class FFmpegQuality {
 		Duration d = Duration.ofMillis(System.currentTimeMillis() - start);
 		System.out.println("Done! Time : " + String.format("%02d:%02d:%02d.%03d", d.toHours(), d.toMinutesPart(),
 				d.toSecondsPart(), d.toMillisPart()) + "ms");
+		
+		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
 	}
 
 	public static void launch(QualityTask t) {
 		List<String> cmd = new LinkedList<String>();
-		cmd.addAll(List.of(ffmpegdir + "ffmpeg", 
+		cmd.addAll(List.of(new File(ffmpegdir, "ffmpeg").getAbsolutePath(), 
 				"-hide_banner",
 				"-i", t.distorted(), "-i", t.reference(), "-filter_complex",
 				filterlog 
@@ -215,7 +215,8 @@ public class FFmpegQuality {
 	// https://superuser.com/questions/1106343/determine-video-bitrate-using-ffmpeg
 	public static String bitrate(File dir, String file) {
 		ProcessBuilder pb = new ProcessBuilder(
-				List.of(ffmpegdir + "ffprobe.exe", "-v", "quiet", "-select_streams", "v:0", "-show_entries", "format=bit_rate", "-of", "default=noprint_wrappers=1:nokey=1", file));
+				List.of(new File(ffmpegdir, "ffprobe.exe").getAbsolutePath(), "-v", "quiet", "-select_streams", "v:0",
+						"-show_entries", "format=bit_rate", "-of", "default=noprint_wrappers=1:nokey=1", file));
 		pb.directory(dir);
 		try {
 			Process p = pb.start();
@@ -229,10 +230,11 @@ public class FFmpegQuality {
 		}
 	}
 
-}
-
-record QualityTask(String name, String reference, String distorted) {
-	public QualityTask(String reference, String distorted) {
-		this(new File(distorted).getName(), reference, distorted);
+	public static record QualityTask(String name, String reference, String distorted) {
+		public QualityTask(String reference, String distorted) {
+			this(new File(distorted).getName(), reference, distorted);
+		}
 	}
 }
+
+

@@ -38,8 +38,8 @@ public class FFmpegEncode {
 	private final static ExecutorService pool = Executors.newFixedThreadPool(THREADS);
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
-	private static String ffmpegdir = ""; // TODO : preference
-	private static File root = new File("");
+	private static String ffmpegdir = FFmpegProperties.ffmpegDir();
+	private static File root = FFmpegProperties.workingDir();
 	private static File dest = new File(root, "nvidia");
 	
 	private static File logDir = new File(root, "logs");
@@ -50,7 +50,8 @@ public class FFmpegEncode {
 
 		if(!logDir.exists()) logDir.mkdirs();
 		if(!dest.exists()) dest.mkdirs();
-		System.out.println("Using " + THREADS + " threads...");
+		System.out.println("Destination : " + dest.getAbsolutePath());
+		System.out.println("Encode task using " + THREADS + " threads...");
 		long start = System.currentTimeMillis();
 		
 		SwingUtilities.invokeAndWait(() -> {
@@ -58,25 +59,7 @@ public class FFmpegEncode {
 			frame.setVisible(true);
 		});
 		
-		String input = new File(root, "14.mp4").getAbsolutePath();
-		
-		List.of(
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "h264_nvenc_default.mp4"),
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p6", "h264_nvenc_p6.mp4"),
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p7", "h264_nvenc_p7.mp4"),
-				
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-cq", "18", "h264_nvenc_cq18.mp4"),
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-cq", "23", "h264_nvenc_cq23.mp4"),
-				
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p6", "-cq", "18", "h264_nvenc_p6_cq18.mp4"),
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p6", "-cq", "23", "h264_nvenc_p6_cq23.mp4"),
-				
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p7", "-cq", "18", "h264_nvenc_p7_cq18.mp4"),
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p7", "-cq", "23", "h264_nvenc_p7_cq23.mp4"),
-
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p2", "-cq", "18", "h264_nvenc_p2_cq18.mp4"),
-				new EncodeTask("-i", input, "-c:v", "h264_nvenc", "-preset", "p2", "-cq", "23", "h264_nvenc_p2_cq23.mp4")
-				)
+		FFmpegProperties.getEncodeTasks(new File(root, "14.mp4").getAbsolutePath())
 		.stream()
 		.map(t -> pool.submit(() -> launch(t)))
 		.toList().stream()
@@ -95,12 +78,14 @@ public class FFmpegEncode {
 		Duration d = Duration.ofMillis(System.currentTimeMillis() - start);
 		System.out.println("Done! Time : " + String.format("%02d:%02d:%02d.%03d", d.toHours(), d.toMinutesPart(),
 				d.toSecondsPart(), d.toMillisPart()) + "ms");
+		
+		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
 	}
 
 	public static void launch(EncodeTask t) {
 		List<String> cmd = new LinkedList<String>();
-		cmd.addAll(List.of(ffmpegdir + "ffmpeg.exe", 
-				"-hide_banner" //, "-nostats"
+		cmd.addAll(List.of(new File(ffmpegdir, "ffmpeg").getAbsolutePath(),
+				"-hide_banner", "-y" //, "-nostats"
 				));
 		cmd.addAll(t.options());
 		ProcessBuilder pb = new ProcessBuilder(cmd);
@@ -193,11 +178,11 @@ public class FFmpegEncode {
 		}
 	}
 
-
-}
-
-record EncodeTask(String output, List<String> options) { 
-	public EncodeTask(String... options) {
-		this(options[options.length - 1], Arrays.asList(options));
+	public static record EncodeTask(String output, List<String> options) { 
+		public EncodeTask(String... options) {
+			this(options[options.length - 1], Arrays.asList(options));
+		}
 	}
+
 }
+
