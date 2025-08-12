@@ -62,8 +62,9 @@ class CustomTableModel extends AbstractTableModel {
 }
 
 public class EncodeStatusFrame extends JFrame {
-    private static final long serialVersionUID = 2014707731371717590L;
-
+    private static final long serialVersionUID = 6824301321071689234L;
+    
+	private JTable table;
     private CustomTableModel model;
     
 	public EncodeStatusFrame() {
@@ -76,7 +77,7 @@ public class EncodeStatusFrame extends JFrame {
 
         //model.addRow(new EncodeStatus("video2.mp4", 250, 24.00, 0.8, "Paused"));
 
-        JTable table = new JTable(model) {
+        table = new JTable(model) {
 
             private static final long serialVersionUID = 5299145840097237290L;
 
@@ -121,7 +122,10 @@ public class EncodeStatusFrame extends JFrame {
 	
 	public EncodeStatus addTable(File outFile) {
 		EncodeStatus e = new EncodeStatus(outFile, "", "", "", "", "Running");
-		SwingUtilities.invokeLater(() -> model.addRow(e));
+		SwingUtilities.invokeLater(() -> {
+			model.addRow(e);
+			table.scrollRectToVisible(table.getCellRect(table.getRowCount()-1, 0, true));
+		});
 		return e;
 	}
 	

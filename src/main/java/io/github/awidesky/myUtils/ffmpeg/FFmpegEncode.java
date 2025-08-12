@@ -12,14 +12,21 @@ package io.github.awidesky.myUtils.ffmpeg;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,14 +34,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.swing.SwingUtilities;
 
 public class FFmpegEncode {
 	
-	private final static int THREADS = 8; //Runtime.getRuntime().availableProcessors();
+	private final static int THREADS = 1; //Runtime.getRuntime().availableProcessors();
 	private final static ExecutorService pool = Executors.newFixedThreadPool(THREADS);
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
@@ -43,13 +49,16 @@ public class FFmpegEncode {
 	private static File dest = FFmpegProperties.destDir();
 	
 	private static File logDir = new File(root, "logs");
+	private static Properties encodeSpeeds = new Properties();
 	
 	private static EncodeStatusFrame frame;
 	
-	public static void main(String[] args) throws InvocationTargetException, InterruptedException {
-
+	public static void main(String[] args) throws InvocationTargetException, InterruptedException, FileNotFoundException, IOException {
+		File input = new File(root, "14.mp4");
+		
 		if(!logDir.exists()) logDir.mkdirs();
 		if(!dest.exists()) dest.mkdirs();
+		
 		System.out.println("Destination : " + dest.getAbsolutePath());
 		System.out.println("Encode task using " + THREADS + " threads...");
 		long start = System.currentTimeMillis();
@@ -59,8 +68,8 @@ public class FFmpegEncode {
 			frame.setVisible(true);
 		});
 		
-		FFmpegProperties.getEncodeTasks(new File(root, "14.mp4").getAbsolutePath())
-		.stream()
+		List<EncodeTask> taskList = FFmpegProperties.getEncodeTasks(input.getAbsolutePath());
+		taskList.stream()
 		.map(t -> pool.submit(() -> launch(t)))
 		.toList().stream()
 		.forEach(f -> {
@@ -80,6 +89,17 @@ public class FFmpegEncode {
 				d.toSecondsPart(), d.toMillisPart()) + "ms");
 		
 		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
+		
+		File speedData = new File(".", //TODO : access denied, use app folder? + write frequently
+				"EncodeSpeeds_" + input.getName() + "_" + THREADS
+				+ new SimpleDateFormat("_yyyy-MM-dd-kk-mm-ss-SSSS").format(new Date()) + ".txt");
+		encodeSpeeds.store(new FileWriter(speedData, StandardCharsets.UTF_8),
+				"Input : " + input.getAbsolutePath() + ", threads : " + THREADS);
+		System.out.println("Encode speed data saved : " + speedData.getAbsolutePath());
+		
+		File qualityTest = new File(logDir, "qualityTaskSuite.txt");
+		Files.write(qualityTest.toPath(), taskList.stream().map(t -> input.getName() + " " + t.output()).sorted().toList(), StandardOpenOption.CREATE);
+		System.out.println("Quality test suite saved : " + qualityTest.getAbsolutePath());
 	}
 
 	public static void launch(EncodeTask t) {
@@ -113,13 +133,12 @@ public class FFmpegEncode {
 		try {
 			Process p = pb.start();
 			Future<?> f1 = iopool.submit(() -> {
-				Pattern statPattern = Pattern.compile("frame=\\s*(\\d+).*?fps=\\s*(\\d+).*?speed=([\\d.]+)x\\s*elapsed=([\\d:.]+)");
 				try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()))) {
 					String line;
 					while((line = br.readLine()) != null) {
-						pw.println(line);
+						pw.println("[stderr] " + line);
 						
-						Matcher matcher = statPattern.matcher(line);
+						Matcher matcher = FFmpegProperties.statPattern().matcher(line);
 						if (matcher.find()) {
 							SwingUtilities.invokeLater(() -> {
 								stat.set(matcher.group(1), matcher.group(2), matcher.group(4), matcher.group(3));
@@ -136,7 +155,7 @@ public class FFmpegEncode {
 				try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
 					String line;
 					while((line = br.readLine()) != null) {
-						pw.println(line);
+						pw.println("[stdout] " + line);
 					}
 				} catch (IOException e) {
 					e.printStackTrace(pw);
@@ -158,6 +177,7 @@ public class FFmpegEncode {
 			SwingUtilities.invokeLater(() -> {
 				stat.setStatus("Finished with " + p.exitValue());
 				frame.updated(stat);
+				encodeSpeeds.put(t.output(), stat.getSpeed());
 			});
 			
 			ProcessHandle.Info info = p.info();

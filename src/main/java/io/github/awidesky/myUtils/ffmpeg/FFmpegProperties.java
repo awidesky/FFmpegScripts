@@ -11,7 +11,9 @@ package io.github.awidesky.myUtils.ffmpeg;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,11 +37,13 @@ public class FFmpegProperties {
 	
 	private static final Map<String, String> properties = new HashMap<>();
 	
+	private static final Pattern statPattern = Pattern.compile("frame=\\s*(\\d+).*?fps=\\s*(\\d+).*?speed=([\\d.]+)x\\s*elapsed=([\\d:.]+)");
+	
 	static {		
 		if(!Files.exists(propertyFile)) {
 			try {
 				Files.createFile(propertyFile);
-				Files.write(propertyFile, List.of("ffmpegdir=.", "workingdir=.", "destdir=dest"), StandardOpenOption.CREATE);
+				Files.write(propertyFile, List.of("ffmpegdir=.", "workingdir=.", "destdir=dest", "encodespeed=nonExist.txt"), StandardOpenOption.CREATE);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -81,6 +86,20 @@ public class FFmpegProperties {
 		return new File(properties.getOrDefault("destdir", "dest"));
 	}
 	
+	public static Pattern statPattern() {
+		return statPattern;
+	}
+	
+	public static Properties encodeSpeeds() {
+		Properties ret = new Properties();
+		try {
+			if(properties.containsKey("encodespeed")) ret.load(new FileReader(new File(properties.get("encodespeed")), StandardCharsets.UTF_8));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+	
 	private static final Pattern TOKEN_PATTERN = Pattern.compile("\"([^\"]*)\"|(\\S+)");
 	public static List<EncodeTask> getEncodeTasks(String input) {
 		boolean ignore = false;
@@ -110,11 +129,11 @@ public class FFmpegProperties {
 		return result;
 	}
 	
-	public static List<QualityTask> getQualityTasks() {
+	public static List<QualityTask> getQualityTasks(String input) {
 		boolean ignore = false;
 		List<QualityTask> result = new LinkedList<>();
 		
-		try (BufferedReader br = Files.newBufferedReader(encodeJobFile)) {
+		try (BufferedReader br = Files.newBufferedReader(qualityJobFile)) {
 			String line;
 			while ((line = br.readLine()) != null) {
 				if(line.startsWith("###")) ignore = !ignore;
@@ -125,13 +144,14 @@ public class FFmpegProperties {
 				Matcher matcher = TOKEN_PATTERN.matcher(line);
 				while (matcher.find()) {
 					String token = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+					if("?input?".equals(token) && input != null) token = input;
 					tokens.add(token);
 				}
 				
 				if (tokens.size() == 2) {
-					result.add(new QualityTask(tokens.get(0), tokens.get(1)));
+					result.add(new QualityTask(new File(workingDir(), tokens.get(0)).getAbsolutePath(), new File(destDir(), tokens.get(1)).getAbsolutePath()));
 				} else if (tokens.size() == 3) {
-					result.add(new QualityTask(tokens.get(0), tokens.get(1), tokens.get(3)));
+					result.add(new QualityTask(tokens.get(0), new File(workingDir(), tokens.get(1)).getAbsolutePath(), new File(workingDir(), tokens.get(2)).getAbsolutePath()));
 				} else {
                     System.err.println("Invalid line (not 2 or 3 tokens): " + line);
                     System.err.println(tokens.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")));
