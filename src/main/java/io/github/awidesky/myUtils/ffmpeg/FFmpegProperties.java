@@ -123,7 +123,6 @@ public class FFmpegProperties {
 				result.add(new EncodeTask(tokens.toArray(String[]::new)));
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return result;
@@ -158,7 +157,6 @@ public class FFmpegProperties {
                 }
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return result;

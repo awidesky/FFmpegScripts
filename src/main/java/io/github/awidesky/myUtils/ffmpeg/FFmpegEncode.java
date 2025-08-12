@@ -38,6 +38,8 @@ import java.util.stream.Collectors;
 
 import javax.swing.SwingUtilities;
 
+import io.github.awidesky.projectPath.UserDataPath;
+
 public class FFmpegEncode {
 	
 	private final static int THREADS = 1; //Runtime.getRuntime().availableProcessors();
@@ -90,7 +92,7 @@ public class FFmpegEncode {
 		
 		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
 		
-		File speedData = new File(".", //TODO : access denied, use app folder? + write frequently
+		File speedData = new File(UserDataPath.appLocalFolder("awidesky", "MyUtils", "ffmpeg"),
 				"EncodeSpeeds_" + input.getName() + "_" + THREADS
 				+ new SimpleDateFormat("_yyyy-MM-dd-kk-mm-ss-SSSS").format(new Date()) + ".txt");
 		encodeSpeeds.store(new FileWriter(speedData, StandardCharsets.UTF_8),
