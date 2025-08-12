@@ -38,7 +38,7 @@ public class FFmpegProperties {
 		if(!Files.exists(propertyFile)) {
 			try {
 				Files.createFile(propertyFile);
-				Files.write(propertyFile, List.of("ffmpegdir=.", "workingdir=."), StandardOpenOption.CREATE);
+				Files.write(propertyFile, List.of("ffmpegdir=.", "workingdir=.", "destdir=dest"), StandardOpenOption.CREATE);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -76,7 +76,10 @@ public class FFmpegProperties {
 	public static File workingDir() {
 		return new File(properties.getOrDefault("workingdir", "."));
 	}
-	
+
+	public static File destDir() {
+		return new File(properties.getOrDefault("destdir", "dest"));
+	}
 	
 	private static final Pattern TOKEN_PATTERN = Pattern.compile("\"([^\"]*)\"|(\\S+)");
 	public static List<EncodeTask> getEncodeTasks(String input) {
@@ -140,4 +143,5 @@ public class FFmpegProperties {
 		}
 		return result;
 	}
+
 }

@@ -40,7 +40,7 @@ public class FFmpegEncode {
 
 	private static String ffmpegdir = FFmpegProperties.ffmpegDir();
 	private static File root = FFmpegProperties.workingDir();
-	private static File dest = new File(root, "nvidia");
+	private static File dest = FFmpegProperties.destDir();
 	
 	private static File logDir = new File(root, "logs");
 	
