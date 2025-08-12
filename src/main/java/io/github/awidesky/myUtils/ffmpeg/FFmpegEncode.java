@@ -113,7 +113,7 @@ public class FFmpegEncode {
 		try {
 			Process p = pb.start();
 			Future<?> f1 = iopool.submit(() -> {
-				Pattern statPattern = Pattern.compile("frame=\\s*(\\d+).*?fps=\\s*(\\d+).*?time=([\\d:.]+).*?speed=([\\d.]+)x");
+				Pattern statPattern = Pattern.compile("frame=\\s*(\\d+).*?fps=\\s*(\\d+).*?speed=([\\d.]+)x\\s*elapsed=([\\d:.]+)");
 				try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()))) {
 					String line;
 					while((line = br.readLine()) != null) {
@@ -122,7 +122,7 @@ public class FFmpegEncode {
 						Matcher matcher = statPattern.matcher(line);
 						if (matcher.find()) {
 							SwingUtilities.invokeLater(() -> {
-								stat.set(matcher.group(1), matcher.group(2), matcher.group(3), matcher.group(4));
+								stat.set(matcher.group(1), matcher.group(2), matcher.group(4), matcher.group(3));
 								frame.updated(stat);
 							});
 						}
