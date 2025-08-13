@@ -9,6 +9,7 @@
 
 package io.github.awidesky.myUtils.ffmpeg;
 
+import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -98,6 +99,9 @@ public class FFmpegQuality {
 		File resultFile = new File(logDir, "results.txt");
 		Files.write(resultFile.toPath(), resultList.stream().sorted().toList(), StandardOpenOption.CREATE);
 		System.out.println("Result file saved : " + resultFile.getAbsolutePath());
+		
+		Desktop.getDesktop().open(logDir);
+		Desktop.getDesktop().open(resultFile);
 	}
 
 	public static void launch(QualityTask t) {
