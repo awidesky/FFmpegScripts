@@ -45,9 +45,8 @@ public class FFmpegQuality {
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
 	private static String ffmpegdir = FFmpegProperties.ffmpegDir();
-	private static File root = FFmpegProperties.workingDir();
 	
-	private static File logDir = new File(root, "logs");
+	private static File logDir;
 	private static Vector<String> resultList;
 	private static Properties encodeSpeeds;
 	
@@ -57,17 +56,23 @@ public class FFmpegQuality {
 	
 	public static void main(String[] args) throws IOException, InvocationTargetException, InterruptedException {
 
+		List<QualityTask> taskList = FFmpegProperties.getQualityTasks(null);
+		logDir = new File(FFmpegProperties.getAppFolder(), "logs_Quality_"
+						+ taskList.stream().map(QualityTask::reference).map(File::new).map(File::getName).distinct().limit(3).collect(Collectors.joining("_"))
+						+ new SimpleDateFormat("_yyyy-MM-dd-kk-mm-ss-SSSS").format(new Date()));
+		
+		System.out.println("logDir : " + logDir.getAbsolutePath());
 		encodeSpeeds = FFmpegProperties.encodeSpeeds();
 		if(!logDir.exists()) logDir.mkdirs();
 		
 		System.out.println("Quality task using " + THREADS + " threads...");
 		long start = System.currentTimeMillis();
 		SwingUtilities.invokeAndWait(() -> {
-			frame = new EncodeStatusFrame();
+			frame = new EncodeStatusFrame("Quality");
 			frame.setVisible(true);
 		});
 		
-		List<QualityTask> taskList = FFmpegProperties.getQualityTasks("24.mp4");
+		System.out.println(taskList.size() + " tasks...");
 		resultList = new Vector<String>(taskList.size());
 		taskList.stream()
 		.map(t -> pool.submit(() -> launch(t)))
@@ -90,7 +95,7 @@ public class FFmpegQuality {
 		
 		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
 		
-		File resultFile = new File(root, "results_" + new SimpleDateFormat("yyyy-MM-dd-kk-mm-ss-SSSS").format(new Date()) + ".txt");
+		File resultFile = new File(logDir, "results.txt");
 		Files.write(resultFile.toPath(), resultList.stream().sorted().toList(), StandardOpenOption.CREATE);
 		System.out.println("Result file saved : " + resultFile.getAbsolutePath());
 	}

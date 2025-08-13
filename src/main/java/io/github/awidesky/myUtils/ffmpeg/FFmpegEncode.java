@@ -38,8 +38,6 @@ import java.util.stream.Collectors;
 
 import javax.swing.SwingUtilities;
 
-import io.github.awidesky.projectPath.UserDataPath;
-
 public class FFmpegEncode {
 	
 	private final static int THREADS = 1; //Runtime.getRuntime().availableProcessors();
@@ -47,30 +45,33 @@ public class FFmpegEncode {
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
 	private static String ffmpegdir = FFmpegProperties.ffmpegDir();
-	private static File root = FFmpegProperties.workingDir();
+	private static File workingdir = FFmpegProperties.workingDir();
 	private static File dest = FFmpegProperties.destDir();
 	
-	private static File logDir = new File(root, "logs");
+	private static File logDir = new File(FFmpegProperties.getAppFolder(), "logs_Encode_" + FFmpegProperties.input()
+											+ new SimpleDateFormat("_yyyy-MM-dd-kk-mm-ss-SSSS").format(new Date()));
 	private static Properties encodeSpeeds = new Properties();
 	
 	private static EncodeStatusFrame frame;
 	
 	public static void main(String[] args) throws InvocationTargetException, InterruptedException, FileNotFoundException, IOException {
-		File input = new File(root, "14.mp4");
+		File input = new File(workingdir, FFmpegProperties.input());
 		
 		if(!logDir.exists()) logDir.mkdirs();
 		if(!dest.exists()) dest.mkdirs();
+		System.out.println("logDir : " + logDir.getAbsolutePath());
 		
 		System.out.println("Destination : " + dest.getAbsolutePath());
 		System.out.println("Encode task using " + THREADS + " threads...");
 		long start = System.currentTimeMillis();
 		
 		SwingUtilities.invokeAndWait(() -> {
-			frame = new EncodeStatusFrame();
+			frame = new EncodeStatusFrame("Encoding");
 			frame.setVisible(true);
 		});
 		
 		List<EncodeTask> taskList = FFmpegProperties.getEncodeTasks(input.getAbsolutePath());
+		System.out.println(taskList.size() + " tasks...");
 		taskList.stream()
 		.map(t -> pool.submit(() -> launch(t)))
 		.toList().stream()
@@ -92,9 +93,8 @@ public class FFmpegEncode {
 		
 		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
 		
-		File speedData = new File(UserDataPath.appLocalFolder("awidesky", "MyUtils", "ffmpeg"),
-				"EncodeSpeeds_" + input.getName() + "_" + THREADS
-				+ new SimpleDateFormat("_yyyy-MM-dd-kk-mm-ss-SSSS").format(new Date()) + ".txt");
+		File speedData = new File(logDir, "EncodeSpeeds_" + input.getName() + "_" + THREADS + ".txt");
+		speedData.getParentFile().mkdirs(); speedData.createNewFile();
 		encodeSpeeds.store(new FileWriter(speedData, StandardCharsets.UTF_8),
 				"Input : " + input.getAbsolutePath() + ", threads : " + THREADS);
 		System.out.println("Encode speed data saved : " + speedData.getAbsolutePath());

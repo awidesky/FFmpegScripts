@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import io.github.awidesky.myUtils.ffmpeg.FFmpegEncode.EncodeTask;
 import io.github.awidesky.myUtils.ffmpeg.FFmpegQuality.QualityTask;
+import io.github.awidesky.projectPath.UserDataPath;
 
 public class FFmpegProperties {
 	private static final Path propertyFile = Paths.get("ffmpeg.properties");
@@ -43,7 +44,7 @@ public class FFmpegProperties {
 		if(!Files.exists(propertyFile)) {
 			try {
 				Files.createFile(propertyFile);
-				Files.write(propertyFile, List.of("ffmpegdir=.", "workingdir=.", "destdir=dest", "encodespeed=nonExist.txt"), StandardOpenOption.CREATE);
+				Files.write(propertyFile, List.of("ffmpegdir=.", "workingdir=.", "input=nonExist.mp4", "destdir=dest", "encodespeed=nonExist.txt"), StandardOpenOption.CREATE);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -82,6 +83,10 @@ public class FFmpegProperties {
 		return new File(properties.getOrDefault("workingdir", "."));
 	}
 
+	public static String input() {
+		return properties.getOrDefault("input", "nonExist.mp4");
+	}
+
 	public static File destDir() {
 		return new File(properties.getOrDefault("destdir", "dest"));
 	}
@@ -93,7 +98,7 @@ public class FFmpegProperties {
 	public static Properties encodeSpeeds() {
 		Properties ret = new Properties();
 		try {
-			if(properties.containsKey("encodespeed")) ret.load(new FileReader(new File(properties.get("encodespeed")), StandardCharsets.UTF_8));
+			if(properties.containsKey("encodespeed")) ret.load(new FileReader(new File(getAppFolder(), properties.get("encodespeed")), StandardCharsets.UTF_8));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -160,6 +165,10 @@ public class FFmpegProperties {
 			e.printStackTrace();
 		}
 		return result;
+	}
+
+	public static String getAppFolder() {
+		return UserDataPath.appLocalFolder("awidesky", "MyUtils", "ffmpeg");
 	}
 
 }
