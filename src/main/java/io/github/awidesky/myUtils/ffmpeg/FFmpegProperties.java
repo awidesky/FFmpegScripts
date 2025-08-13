@@ -34,7 +34,7 @@ import io.github.awidesky.projectPath.UserDataPath;
 public class FFmpegProperties {
 	private static final Path propertyFile = Paths.get("ffmpeg.properties");
 	private static final Path encodeJobFile = Paths.get("ffmpegEncodeJobs.txt");
-	private static final Path qualityJobFile = Paths.get("ffmpegQualityJobs.txt");
+	private static Path qualityJobFile = Paths.get("ffmpegQualityJobs.txt");
 	
 	private static final Map<String, String> properties = new HashMap<>();
 	
@@ -136,7 +136,8 @@ public class FFmpegProperties {
 	public static List<QualityTask> getQualityTasks(String input) {
 		boolean ignore = false;
 		List<QualityTask> result = new LinkedList<>();
-		
+
+		if(properties.containsKey("qualitytestsuite")) qualityJobFile = Paths.get(getAppFolder(), properties.get("qualitytestsuite"));
 		try (BufferedReader br = Files.newBufferedReader(qualityJobFile)) {
 			String line;
 			while ((line = br.readLine()) != null) {
