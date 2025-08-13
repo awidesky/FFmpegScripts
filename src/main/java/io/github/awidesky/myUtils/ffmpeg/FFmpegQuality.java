@@ -68,7 +68,7 @@ public class FFmpegQuality {
 		System.out.println("Quality task using " + THREADS + " threads...");
 		long start = System.currentTimeMillis();
 		SwingUtilities.invokeAndWait(() -> {
-			frame = new EncodeStatusFrame("Quality");
+			frame = new EncodeStatusFrame("Quality : " + taskList.stream().map(QualityTask::reference).map(File::new).map(File::getName).distinct().limit(5).collect(Collectors.joining("_")));
 			frame.setVisible(true);
 		});
 		

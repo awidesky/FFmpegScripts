@@ -66,7 +66,7 @@ public class FFmpegEncode {
 		long start = System.currentTimeMillis();
 		
 		SwingUtilities.invokeAndWait(() -> {
-			frame = new EncodeStatusFrame("Encoding");
+			frame = new EncodeStatusFrame("Encoding : " + input.getName() + " (" + input.getAbsolutePath() + ")");
 			frame.setVisible(true);
 		});
 		
