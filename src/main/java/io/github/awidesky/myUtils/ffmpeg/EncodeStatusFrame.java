@@ -66,9 +66,10 @@ public class EncodeStatusFrame extends JFrame {
     
 	private JTable table;
     private CustomTableModel model;
+    private String additionalTitle = "";
     
-	public EncodeStatusFrame(String str) {
-        setTitle("ffmpeg process status : " + str);
+	public EncodeStatusFrame() {
+        setTitle("ffmpeg process status");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 500);
         setLocationRelativeTo(null);
@@ -131,6 +132,15 @@ public class EncodeStatusFrame extends JFrame {
 	
 	public void updated(EncodeStatus e) {
 		model.updated(e);
+	}
+
+	public void setAdditionalTitle(String str) {
+		this.additionalTitle = str;
+		setTitle(getTitle() + " / " + additionalTitle);
+	}
+	
+	public void title(String newTitle) {
+		setTitle(newTitle + " / " + additionalTitle);
 	}
 
 }

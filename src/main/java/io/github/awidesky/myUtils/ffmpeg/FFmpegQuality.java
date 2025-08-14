@@ -69,7 +69,12 @@ public class FFmpegQuality {
 		System.out.println("Quality task using " + THREADS + " threads...");
 		long start = System.currentTimeMillis();
 		SwingUtilities.invokeAndWait(() -> {
-			frame = new EncodeStatusFrame("Quality : " + taskList.stream().map(QualityTask::reference).map(File::new).map(File::getName).distinct().limit(5).collect(Collectors.joining("_")));
+			frame = new EncodeStatusFrame();
+			frame.setAdditionalTitle("Quality : " + taskList.stream()
+					.map(QualityTask::reference).map(File::new).map(File::getName).distinct().limit(5).collect(Collectors.joining(", "))
+				+ ", distorted : " + taskList.stream()
+					.map(QualityTask::distorted).map(File::new).map(File::getName).distinct().limit(5).collect(Collectors.joining(", "))
+				);
 			frame.setVisible(true);
 		});
 		
@@ -94,7 +99,7 @@ public class FFmpegQuality {
 		System.out.println("Done! Time : " + String.format("%02d:%02d:%02d.%03d", d.toHours(), d.toMinutesPart(),
 				d.toSecondsPart(), d.toMillisPart()) + "ms");
 		
-		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
+		SwingUtilities.invokeLater(() -> frame.title("ffmpeg process Finished!"));
 		
 		File resultFile = new File(logDir, "results.txt");
 		Files.write(resultFile.toPath(), resultList.stream().sorted().toList(), StandardOpenOption.CREATE);

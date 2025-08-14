@@ -66,11 +66,23 @@ public class FFmpegEncode {
 		long start = System.currentTimeMillis();
 		
 		SwingUtilities.invokeAndWait(() -> {
-			frame = new EncodeStatusFrame("Encoding : " + input.getName() + " (" + input.getAbsolutePath() + ")");
+			frame = new EncodeStatusFrame();
 			frame.setVisible(true);
 		});
 		
+		
 		List<EncodeTask> taskList = FFmpegProperties.getEncodeTasks(input.getAbsolutePath());
+		SwingUtilities.invokeAndWait(() -> {
+			List<String> inputs = taskList.stream().map(EncodeTask::options)
+					.filter(l -> -1 < l.indexOf("-i") && l.indexOf("-i") < l.size()-1)
+					.map(l -> l.get(1 + l.indexOf("-i"))).distinct().limit(5).toList();
+			
+			String paths = inputs.size() == 1 ? new File(inputs.get(0)).getAbsolutePath()
+					: inputs.stream().map(File::new).map(File::getParent).distinct().collect(Collectors.joining(", "));
+			frame.setAdditionalTitle("Encoding : "
+					+ inputs.stream().map(File::new).map(File::getName).collect(Collectors.joining(", "))
+					+ " (" + paths + ")");
+		});
 		System.out.println(taskList.size() + " tasks...");
 		taskList.stream()
 		.map(t -> pool.submit(() -> launch(t)))
@@ -91,7 +103,7 @@ public class FFmpegEncode {
 		System.out.println("Done! Time : " + String.format("%02d:%02d:%02d.%03d", d.toHours(), d.toMinutesPart(),
 				d.toSecondsPart(), d.toMillisPart()) + "ms");
 		
-		SwingUtilities.invokeLater(() -> frame.setTitle("ffmpeg process Finished!"));
+		SwingUtilities.invokeLater(() -> frame.title("ffmpeg process Finished!"));
 		
 		File speedData = new File(logDir, "EncodeSpeeds_" + input.getName() + "_" + THREADS + ".txt");
 		speedData.getParentFile().mkdirs(); speedData.createNewFile();
