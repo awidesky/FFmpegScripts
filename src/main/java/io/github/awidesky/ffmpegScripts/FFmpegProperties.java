@@ -113,6 +113,7 @@ public class FFmpegProperties {
 		try (BufferedReader br = Files.newBufferedReader(encodeJobFile)) {
 			String line;
 			while ((line = br.readLine()) != null) {
+				if(line.startsWith("####")) break;
 				if(line.startsWith("###")) ignore = !ignore;
 				if(ignore) continue;
 				if(line.startsWith("#") || line.isBlank()) continue;
@@ -141,6 +142,7 @@ public class FFmpegProperties {
 		try (BufferedReader br = Files.newBufferedReader(qualityJobFile)) {
 			String line;
 			while ((line = br.readLine()) != null) {
+				if(line.startsWith("####")) break;
 				if(line.startsWith("###")) ignore = !ignore;
 				if(ignore) continue;
 				if(line.startsWith("#") || line.isBlank()) continue;
