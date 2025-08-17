@@ -7,7 +7,7 @@
  * Please refer to LICENSE
  * */
 
-package io.github.awidesky.myUtils.ffmpeg;
+package io.github.awidesky.ffmpegScripts;
 
 import java.util.Arrays;
 import java.util.regex.Matcher;

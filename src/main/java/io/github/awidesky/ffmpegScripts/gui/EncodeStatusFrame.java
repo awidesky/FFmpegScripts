@@ -1,4 +1,4 @@
-package io.github.awidesky.myUtils.ffmpeg;
+package io.github.awidesky.ffmpegScripts.gui;
 
 import java.awt.BorderLayout;
 import java.awt.event.MouseEvent;
@@ -11,6 +11,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.table.AbstractTableModel;
+
+import io.github.awidesky.ffmpegScripts.EncodeStatus;
 
 class CustomTableModel extends AbstractTableModel {
     private static final long serialVersionUID = 5495422621043965010L;

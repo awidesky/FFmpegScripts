@@ -7,7 +7,7 @@
  * Please refer to LICENSE
  * */
 
-package io.github.awidesky.myUtils.ffmpeg;
+package io.github.awidesky.ffmpegScripts;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,8 +27,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import io.github.awidesky.myUtils.ffmpeg.FFmpegEncode.EncodeTask;
-import io.github.awidesky.myUtils.ffmpeg.FFmpegQuality.QualityTask;
+import io.github.awidesky.ffmpegScripts.FFmpegEncode.EncodeTask;
+import io.github.awidesky.ffmpegScripts.FFmpegQuality.QualityTask;
 import io.github.awidesky.projectPath.UserDataPath;
 
 public class FFmpegProperties {

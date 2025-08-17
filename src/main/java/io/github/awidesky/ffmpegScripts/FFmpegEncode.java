@@ -7,7 +7,7 @@
  * Please refer to LICENSE
  * */
 
-package io.github.awidesky.myUtils.ffmpeg;
+package io.github.awidesky.ffmpegScripts;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,6 +37,8 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import javax.swing.SwingUtilities;
+
+import io.github.awidesky.ffmpegScripts.gui.EncodeStatusFrame;
 
 public class FFmpegEncode {
 	

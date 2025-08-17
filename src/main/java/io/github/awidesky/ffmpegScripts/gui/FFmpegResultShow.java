@@ -7,7 +7,7 @@
  * Please refer to LICENSE
  * */
 
-package io.github.awidesky.myUtils.ffmpeg;
+package io.github.awidesky.ffmpegScripts.gui;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Scanner;
 import java.util.stream.Collectors;
+
+import io.github.awidesky.ffmpegScripts.TestResult;
 
 public class FFmpegResultShow {
 

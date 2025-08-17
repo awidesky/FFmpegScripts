@@ -1,4 +1,4 @@
-package io.github.awidesky.myUtils.ffmpeg;
+package io.github.awidesky.ffmpegScripts;
 
 import java.io.File;
 
