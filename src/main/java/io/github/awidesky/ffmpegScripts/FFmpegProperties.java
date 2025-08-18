@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,7 +45,7 @@ public class FFmpegProperties {
 		if(!Files.exists(propertyFile)) {
 			try {
 				Files.createFile(propertyFile);
-				Files.write(propertyFile, List.of("ffmpegdir=.", "workingdir=.", "input=nonExist.mp4", "destdir=dest", "encodespeed=nonExist.txt"), StandardOpenOption.CREATE);
+				Files.write(propertyFile, List.of("ffmpegdir=.", "inputdir=.", "input=nonExist.mp4", "destdir=dest", "encodespeed=nonExist.txt"), StandardOpenOption.CREATE);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -79,8 +80,8 @@ public class FFmpegProperties {
 		return properties.getOrDefault("ffmpegdir", ".");
 	}
 
-	public static File workingDir() {
-		return new File(properties.getOrDefault("workingdir", "."));
+	public static File inputDir() {
+		return new File(properties.getOrDefault("inputdir", "."));
 	}
 
 	public static String input() {
@@ -147,21 +148,19 @@ public class FFmpegProperties {
 				if(ignore) continue;
 				if(line.startsWith("#") || line.isBlank()) continue;
 				
-				List<String> tokens = new LinkedList<>();
-				Matcher matcher = TOKEN_PATTERN.matcher(line);
-				while (matcher.find()) {
-					String token = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
-					if("?input?".equals(token) && input != null) token = input;
-					tokens.add(token);
+				String arr[] = line.split(",");
+				for (int i = 0; i < arr.length; i++) {
+					arr[i] = arr[i].strip();
+					if("?input?".equals(arr[i]) && input != null) arr[i] = input;
 				}
 				
-				if (tokens.size() == 2) {
-					result.add(new QualityTask(new File(workingDir(), tokens.get(0)).getAbsolutePath(), new File(destDir(), tokens.get(1)).getAbsolutePath()));
-				} else if (tokens.size() == 3) {
-					result.add(new QualityTask(tokens.get(0), new File(workingDir(), tokens.get(1)).getAbsolutePath(), new File(workingDir(), tokens.get(2)).getAbsolutePath()));
+				if (arr.length == 2) {
+					result.add(new QualityTask(resolveIfCan(inputDir(), arr[0]), resolveIfCan(destDir(), arr[1])));
+				} else if (arr.length == 3) {
+					result.add(new QualityTask(arr[0], resolveIfCan(inputDir(), arr[1]), resolveIfCan(inputDir(), arr[2])));
 				} else {
                     System.err.println("Invalid line (not 2 or 3 tokens): " + line);
-                    System.err.println(tokens.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")));
+                    System.err.println(Arrays.stream(arr).map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")));
                 }
 			}
 		} catch (IOException e) {
@@ -171,7 +170,11 @@ public class FFmpegProperties {
 	}
 
 	public static String getAppFolder() {
-		return UserDataPath.appLocalFolder("awidesky", "MyUtils", "ffmpeg");
+		return UserDataPath.appLocalFolder("awidesky", "ffmpegScripts");
 	}
 
+	public static String resolveIfCan(File path, String file) {
+		if(new File(file).isAbsolute()) return file;
+		else return new File(path, file).getAbsolutePath();
+	}
 }

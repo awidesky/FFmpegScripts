@@ -47,7 +47,7 @@ public class FFmpegEncode {
 	private final static ExecutorService iopool = Executors.newCachedThreadPool();
 
 	private static String ffmpegdir = FFmpegProperties.ffmpegDir();
-	private static File workingdir = FFmpegProperties.workingDir();
+	private static File inputdir = FFmpegProperties.inputDir();
 	private static File dest = FFmpegProperties.destDir();
 	
 	private static File logDir = new File(FFmpegProperties.getAppFolder(), "logs_Encode_" + FFmpegProperties.input()
@@ -57,7 +57,7 @@ public class FFmpegEncode {
 	private static EncodeStatusFrame frame;
 	
 	public static void main(String[] args) throws InvocationTargetException, InterruptedException, FileNotFoundException, IOException {
-		File input = new File(workingdir, FFmpegProperties.input());
+		File input = new File(inputdir, FFmpegProperties.input());
 		
 		if(!logDir.exists()) logDir.mkdirs();
 		if(!dest.exists()) dest.mkdirs();
@@ -114,7 +114,8 @@ public class FFmpegEncode {
 		System.out.println("Encode speed data saved : " + speedData.getAbsolutePath());
 		
 		File qualityTest = new File(logDir, "qualityTaskSuite.txt");
-		Files.write(qualityTest.toPath(), taskList.stream().map(t -> input.getName() + " " + t.output()).sorted().toList(), StandardOpenOption.CREATE);
+		Files.write(qualityTest.toPath(), taskList.stream().map(t -> input.getAbsolutePath() + ", "
+				+ FFmpegProperties.resolveIfCan(dest, t.output())).sorted().toList(), StandardOpenOption.CREATE);
 		System.out.println("Quality test suite saved : " + qualityTest.getAbsolutePath());
 	}
 
@@ -141,7 +142,7 @@ public class FFmpegEncode {
 			e.printStackTrace();
 			return;
 		}
-		EncodeStatus stat = frame.addTable(new File(dest, t.output()));
+		EncodeStatus stat = frame.addTable(new File(FFmpegProperties.resolveIfCan(dest, t.output())));
 		
 		//pb.redirectError(logFile);
 		//pb.redirectOutput(logFile);
