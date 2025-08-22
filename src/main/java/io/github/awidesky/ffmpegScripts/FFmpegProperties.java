@@ -119,15 +119,26 @@ public class FFmpegProperties {
 				if(ignore) continue;
 				if(line.startsWith("#") || line.isBlank()) continue;
 				
+				String i = null;
 				List<String> tokens = new LinkedList<>();
 				Matcher matcher = TOKEN_PATTERN.matcher(line);
 				while (matcher.find()) {
 					String token = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
-					if("?input?".equals(token) && input != null) token = input;
+					if("?input?".equals(token) && input != null) {
+						token = input;
+						i = input;
+					}
 					tokens.add(token);
 				}
-
-				result.add(new EncodeTask(tokens.toArray(String[]::new)));
+				if(i == null) {
+					if(-1 < tokens.indexOf("-i") && tokens.indexOf("-i") < tokens.size()-1) {
+						i = tokens.get(1 + tokens.indexOf("-i"));
+					} else {
+						//TODO : log
+						i = "unknown";
+					}
+				}
+				result.add(new EncodeTask(i, tokens.toArray(String[]::new)));
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -148,7 +159,7 @@ public class FFmpegProperties {
 				if(ignore) continue;
 				if(line.startsWith("#") || line.isBlank()) continue;
 				
-				String arr[] = line.split(",");
+				String arr[] = line.split(";");
 				for (int i = 0; i < arr.length; i++) {
 					arr[i] = arr[i].strip();
 					if("?input?".equals(arr[i]) && input != null) arr[i] = input;

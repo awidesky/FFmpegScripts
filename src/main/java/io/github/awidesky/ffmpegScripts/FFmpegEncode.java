@@ -57,7 +57,6 @@ public class FFmpegEncode {
 	private static EncodeStatusFrame frame;
 	
 	public static void main(String[] args) throws InvocationTargetException, InterruptedException, FileNotFoundException, IOException {
-		File input = new File(inputdir, FFmpegProperties.input());
 		
 		if(!logDir.exists()) logDir.mkdirs();
 		if(!dest.exists()) dest.mkdirs();
@@ -72,17 +71,16 @@ public class FFmpegEncode {
 			frame.setVisible(true);
 		});
 		
+		List<EncodeTask> taskList = Arrays.stream(FFmpegProperties.input().split(";")).map(String::strip)
+				.map(s -> FFmpegProperties.getEncodeTasks(FFmpegProperties.resolveIfCan(inputdir, s)))
+				.flatMap(List::stream).toList();
 		
-		List<EncodeTask> taskList = FFmpegProperties.getEncodeTasks(input.getAbsolutePath());
+		List<File> inputNames = taskList.stream().map(EncodeTask::input).map(File::new)
+				.distinct().limit(5).toList();
 		SwingUtilities.invokeAndWait(() -> {
-			List<String> inputs = taskList.stream().map(EncodeTask::options)
-					.filter(l -> -1 < l.indexOf("-i") && l.indexOf("-i") < l.size()-1)
-					.map(l -> l.get(1 + l.indexOf("-i"))).distinct().limit(5).toList();
-			
-			String paths = inputs.size() == 1 ? new File(inputs.get(0)).getAbsolutePath()
-					: inputs.stream().map(File::new).map(File::getParent).distinct().collect(Collectors.joining(", "));
+			String paths = inputNames.stream().map(File::getAbsolutePath).distinct().collect(Collectors.joining(", "));
 			frame.setAdditionalTitle("Encoding : "
-					+ inputs.stream().map(File::new).map(File::getName).collect(Collectors.joining(", "))
+					+ inputNames.stream().map(File::getName).collect(Collectors.joining(", "))
 					+ " (" + paths + ")");
 		});
 		System.out.println(taskList.size() + " tasks...");
@@ -107,14 +105,16 @@ public class FFmpegEncode {
 		
 		SwingUtilities.invokeLater(() -> frame.title("ffmpeg process Finished!"));
 		
-		File speedData = new File(logDir, "EncodeSpeeds_" + input.getName() + "_" + THREADS + ".txt");
+		File speedData = new File(logDir, "EncodeSpeeds_"
+				+ inputNames.stream().map(File::getName).collect(Collectors.joining("-")) + "_" + THREADS + ".txt");
 		speedData.getParentFile().mkdirs(); speedData.createNewFile();
 		encodeSpeeds.store(new FileWriter(speedData, StandardCharsets.UTF_8),
-				"Input : " + input.getAbsolutePath() + ", threads : " + THREADS);
+				"Input :\n\t" + inputNames.stream().map(File::getAbsolutePath).collect(Collectors.joining("\n\t"))
+				+ "Threads : " + THREADS);
 		System.out.println("Encode speed data saved : " + speedData.getAbsolutePath());
 		
 		File qualityTest = new File(logDir, "qualityTaskSuite.txt");
-		Files.write(qualityTest.toPath(), taskList.stream().map(t -> input.getAbsolutePath() + ", "
+		Files.write(qualityTest.toPath(), taskList.stream().map(t -> t.input + "; "
 				+ FFmpegProperties.resolveIfCan(dest, t.output())).sorted().toList(), StandardOpenOption.CREATE);
 		System.out.println("Quality test suite saved : " + qualityTest.getAbsolutePath());
 	}
@@ -215,9 +215,9 @@ public class FFmpegEncode {
 		}
 	}
 
-	public static record EncodeTask(String output, List<String> options) { 
-		public EncodeTask(String... options) {
-			this(options[options.length - 1], Arrays.asList(options));
+	public static record EncodeTask(String input, String output, List<String> options) { 
+		public EncodeTask(String input, String[] options) {
+			this(input, options[options.length - 1], Arrays.asList(options));
 		}
 	}
 
